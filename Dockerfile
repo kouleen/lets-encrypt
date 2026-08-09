@@ -5,7 +5,7 @@ WORKDIR /app
 # 复制 go.mod 和 go.sum 文件，提前下载依赖
 COPY go.mod go.sum ./
 # 设置代理，加速下载
-RUN #go env -w GOPROXY=https://goproxy.cn,direct && go mod download
+#RUN go env -w GOPROXY=https://goproxy.cn,direct && go mod download
 RUN go mod download
 # 复制整个项目到工作目录
 COPY . .
