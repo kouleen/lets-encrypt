@@ -11,11 +11,18 @@ import (
 )
 
 func SendCode(c *gin.Context) {
-	_ = c.Request.Context()
+	ctx := c.Request.Context()
 	email := c.Query("email")
 	if !validator.ValidateEmail(email) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid email address"})
+		return
 	}
+	resp, err := service.SendCode(ctx, email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func Register(c *gin.Context) {
