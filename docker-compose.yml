@@ -1,0 +1,6 @@
+services:
+  lets-encrypt:
+    image: kouleen/lets-encrypt:latest
+    container_name: lets-encrypt
+    ports:
+      - "8099:8099"

@@ -1,0 +1,51 @@
+package middleware
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/kouleen/lets-encrypt/internal/modle"
+	"github.com/kouleen/lets-encrypt/internal/repository"
+)
+
+func Auth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			accessToken := c.Query("access_token")
+			if accessToken == "" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				c.Abort()
+				return
+			}
+			authHeader = "Bearer " + accessToken
+		}
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Token"})
+			c.Abort()
+			return
+		}
+		tokenString := parts[1]
+		userHeaderJson, err := repository.GetCacheAuth(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.Abort()
+			return
+		}
+		if userHeaderJson == "" {
+			c.JSON(http.StatusUnauthorized, "Invalid Token")
+			c.Abort()
+			return
+		}
+		var acmeAccount modle.AcmeAccount
+		if err := json.Unmarshal([]byte(userHeaderJson), &acmeAccount); err != nil {
+			c.JSON(http.StatusInternalServerError, "Unmarshal err")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
