@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"crypto/tls"
@@ -15,8 +15,8 @@ type CertInfo struct {
 	NeedRenew  bool      // 是否需要续期（剩余≤30 天）
 }
 
-// checkRemoteCertExpire 远程检测域名证书 domain 域名
-func checkRemoteCertExpire(domain string) (*CertInfo, error) {
+// GetRemoteCertExpire 远程检测域名证书 domain 域名
+func GetRemoteCertExpire(domain string, remain int) (*CertInfo, error) {
 	conn, err := tls.Dial("tcp", domain+":443", &tls.Config{InsecureSkipVerify: true})
 	if err != nil {
 		return nil, err
@@ -32,12 +32,12 @@ func checkRemoteCertExpire(domain string) (*CertInfo, error) {
 	return &CertInfo{
 		ExpireTime: localExpire,
 		RemainDay:  remainDay,
-		NeedRenew:  remainDay <= 3,
+		NeedRenew:  remainDay <= remain,
 	}, nil
 }
 
-// checkLocalCertExpire 读取pem证书文件，判断是否过期 certPemPath pem证书文件地址
-func checkLocalCertExpire(certPemPath string) (*CertInfo, error) {
+// GetLocalCertExpire 读取pem证书文件，判断是否过期 certPemPath pem证书文件地址
+func GetLocalCertExpire(certPemPath string, remain int) (*CertInfo, error) {
 	// 读取证书文件
 	data, err := os.ReadFile(certPemPath)
 	if err != nil {
@@ -61,6 +61,6 @@ func checkLocalCertExpire(certPemPath string) (*CertInfo, error) {
 	return &CertInfo{
 		ExpireTime: localExpire,
 		RemainDay:  remainDay,
-		NeedRenew:  remainDay <= 30, // 小于等于30天自动续期
+		NeedRenew:  remainDay <= remain, // 小于等于30天自动续期
 	}, nil
 }

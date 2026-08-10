@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -36,7 +37,17 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 		if userHeaderJson == "" {
-			c.JSON(http.StatusUnauthorized, "Invalid Token")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Token"})
+			c.Abort()
+			return
+		}
+		if c.Request.Method == "POST" && c.Request.URL.Path == "/logout" {
+			if err := repository.DelCacheAuth(tokenString); err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				c.Abort()
+				return
+			}
+			c.JSON(http.StatusOK, true)
 			c.Abort()
 			return
 		}
@@ -46,6 +57,8 @@ func Auth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		ctx := context.WithValue(c.Request.Context(), "username", acmeAccount.Username)
+		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
 }

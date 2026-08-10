@@ -11,11 +11,16 @@ func Register(r *gin.Engine) {
 	{
 		publicGroup.GET("/sendCode", api.SendCode)
 		publicGroup.POST("/login", api.Login)
+		publicGroup.GET("/exist", api.Exist)
 		publicGroup.POST("/register", api.Register)
 	}
-	privateGroup := publicGroup.Group("/")
-	privateGroup.Use(middleware.Auth())
+	domainGroup := publicGroup.Group("/domain")
+	domainGroup.Use(middleware.Auth())
 	{
-		privateGroup.POST("/")
+		domainGroup.GET("/page", api.PageAcme)
+		domainGroup.GET("/refresh", api.RefreshAcme)
+		domainGroup.POST("/create", api.CreateAcme)
+		domainGroup.POST("/put", api.PutAcme)
 	}
+
 }

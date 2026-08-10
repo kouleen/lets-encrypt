@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"testing"
+
+	"github.com/kouleen/lets-encrypt/pkg/util"
 )
 
 func TestCheckRemoteCertExpire(T *testing.T) {
-	certInfo, err := checkRemoteCertExpire("www.kouleen.cn")
+	certInfo, err := util.GetRemoteCertExpire("www.kouleen.cn", 3)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -15,7 +17,7 @@ func TestCheckRemoteCertExpire(T *testing.T) {
 }
 
 func TestCheckLocalCertExpire(t *testing.T) {
-	certInfo, err := checkLocalCertExpire("doc.kouleen.cn.pem")
+	certInfo, err := util.GetLocalCertExpire("doc.kouleen.cn.pem", 3)
 	if err != nil {
 		fmt.Println(err)
 		return

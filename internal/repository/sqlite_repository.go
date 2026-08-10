@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"log"
 
 	"github.com/glebarez/sqlite"
@@ -41,6 +42,36 @@ func init() {
 	log.Println("✅ SQLite 连接成功")
 }
 
-func GetSqliteDb() *gorm.DB {
+func getSqliteDb() *gorm.DB {
 	return sqlDb
+}
+
+func GetAcmeAccountByUsername(ctx context.Context, username string) (*modle.AcmeAccount, error) {
+	acmeAccount := new(modle.AcmeAccount)
+	if err := getSqliteDb().WithContext(ctx).Where("username = ?", username).First(acmeAccount).Error; err != nil {
+		return nil, err
+	}
+	return acmeAccount, nil
+}
+
+func CreateAcmeAccount(ctx context.Context, acmeAccount *modle.AcmeAccount) (any, error) {
+	if err := getSqliteDb().WithContext(ctx).Model(&modle.AcmeAccount{}).Create(acmeAccount).Error; err != nil {
+		return nil, err
+	}
+	return acmeAccount, nil
+}
+
+func GetAcmeEncryptByDomain(ctx context.Context, domain string) (*modle.AcmeEncrypt, error) {
+	acmeEncrypt := new(modle.AcmeEncrypt)
+	if err := getSqliteDb().WithContext(ctx).Where("domain = ?", domain).First(acmeEncrypt).Error; err != nil {
+		return nil, err
+	}
+	return acmeEncrypt, nil
+}
+
+func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any, error) {
+	if err := getSqliteDb().WithContext(ctx).Create(acmeEncrypt).Error; err != nil {
+		return nil, err
+	}
+	return acmeEncrypt, nil
 }
