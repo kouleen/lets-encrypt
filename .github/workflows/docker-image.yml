@@ -32,6 +32,24 @@ jobs:
         tags: kouleen/lets-encrypt:latest
       #run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
 
+      # 仅构建失败时，赋值失败阶段+备注到环境变量
+    - name: Set Fail Info Env
+      id: set_fail_env
+      if: always()
+      run: |
+        if [[ "${{ steps.checkout.outcome }}" == "failure" ]]; then
+          echo "fail_msg=actions/checkout拉取代码失败" >> $GITHUB_ENV
+        elif [[ "${{ steps.setup_docker.outcome }}" == "failure" ]]; then
+          echo "fail_msg=buildx工具初始化失败" >> $GITHUB_ENV
+        elif [[ "${{ steps.docker_login.outcome }}" == "failure" ]]; then
+          echo "fail_msg=Docker账号密码密钥错误，登录仓库失败" >> $GITHUB_ENV
+        elif [[ "${{ steps.docker_build.outcome }}" == "failure" ]]; then
+          echo "fail_stage=Docker镜像构建推送" >> $GITHUB_ENV
+          echo "fail_msg=Docker镜像构建推送失败" >> $GITHUB_ENV
+        else
+          echo "fail_msg=流水线未发现异常" >> $GITHUB_ENV
+        fi
+
     - name: Call Custom Callback API
       if : always()
       run: |
@@ -51,6 +69,7 @@ jobs:
           "commitMessage": "${{ github.event.head_commit.message }}",
           "workflow": "${{ github.workflow }}",
           "triggerType": "${{ github.event_name }}",
+          "failRemark": "${{ env.fail_msg }}",
           "networkMode": "",
           "restartPolicy": "",
           "removeOldExist": true,
@@ -59,6 +78,6 @@ jobs:
               "8099": "8099"
           },
           "envList": [],
-          "volumeBinds": [],
+          "volumeBinds": ["/home/nginx/certs:/app/nginx/certs"],
           "cmdOverride": []
         }'
