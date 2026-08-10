@@ -82,7 +82,7 @@ jobs:
           "portMapping": {
               "8099": "8099"
           },
-          "envList": [],
+          "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
           "volumeBinds": ["/home/nginx/certs:/app/nginx/certs"],
           "cmdOverride": []
         }'
