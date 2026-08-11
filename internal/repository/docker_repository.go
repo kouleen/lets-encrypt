@@ -20,7 +20,7 @@ func init() {
 	}
 	ctxPing, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	if _, err = cli.Ping(ctxPing); err != nil {
+	if _, err = clientWithOpts.Ping(ctxPing); err != nil {
 		log.Fatal("docker daemon unreachable: %w", err)
 	}
 	cli = clientWithOpts
