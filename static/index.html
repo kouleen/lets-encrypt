@@ -1325,6 +1325,15 @@ function getRemainTagClass(days){
   return 'safe';
 }
 
+function canRefresh(c){
+  if(!c.encrypt) return {ok:false, reason:'请先设置证书路径'};
+  const days = calcRemainDays(c.expireTime);
+  if(days === null) return {ok:true, reason:'未检测过期时间'};
+  if(days < 0) return {ok:true, reason:'证书已过期'};
+  if(days <= c.remainDay) return {ok:true, reason:'即将到期'};
+  return {ok:false, reason:`证书还有 ${days} 天到期，未到续期阈值（${c.remainDay} 天）`};
+}
+
 async function loadCertificates(){
   try{
     const searchDomain = $('searchInput') ? $('searchInput').value.trim() : '';
@@ -1373,6 +1382,7 @@ function renderRecentCerts(){
       const rc = getRemainTagClass(days);
       const rt = days === null ? '未检测' : (days < 0 ? '已过期' : days+' 天');
       const hasPath = !!c.encrypt;
+      const ref = canRefresh(c);
       return `<tr>
         <td><span class="domain-cell">${c.domain}</span></td>
         <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
@@ -1380,7 +1390,7 @@ function renderRecentCerts(){
         <td><span class="remain-tag ${rc}">${rt}</span></td>
         <td><div class="action-btns">
           <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
-          <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄</button>
+          <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄</button>
           <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
           <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">删除</button>
         </div></td>
@@ -1408,6 +1418,7 @@ function renderCertificates(){
     const remainClass = getRemainTagClass(days);
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
+    const ref = canRefresh(c);
     return `<tr>
       <td><span class="domain-cell">${c.domain}</span></td>
       <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
@@ -1417,7 +1428,7 @@ function renderCertificates(){
       <td style="font-size:12px;color:var(--text-dim)">${c.encrypt||'未设置'}</td>
       <td><div class="action-btns">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
-        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄</button>
+        <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄</button>
         <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
         <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">🗑</button>
       </div></td>
@@ -1428,6 +1439,7 @@ function renderCertificates(){
     const remainClass = getRemainTagClass(days);
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
+    const ref = canRefresh(c);
     return `<div class="mobile-cert-card">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
@@ -1441,7 +1453,7 @@ function renderCertificates(){
       </div>
       <div class="mobile-cert-actions">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">✏️ 编辑</button>
-        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄 刷新</button>
+        <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄 刷新</button>
         <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️ 下载</button>
         <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">🗑 删除</button>
       </div>
@@ -1493,7 +1505,9 @@ function openEditModal(domain){
 
 function openRefreshModal(domain){
   const cert = certList.find(c=>c.domain===domain);
-  if(!cert || !cert.encrypt){toast('请先设置证书路径','warning');return}
+  if(!cert){toast('证书记录不存在','error');return}
+  const ref = canRefresh(cert);
+  if(!ref.ok){toast(ref.reason,'warning');return}
   refreshTargetDomain = domain;
   $('refreshDomain').textContent = domain;
   openModal('refreshModal');
