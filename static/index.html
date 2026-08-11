@@ -1507,9 +1507,9 @@ async function submitCertificate(){
   const domain = $('certDomain').value.trim();
   const cipher = $('certCipher').value.trim();
   const encrypt = $('certEncrypt').value.trim();
-  const remain_day = parseInt($('certRemainDay').value) || 30;
+  const remainDay = parseInt($('certRemainDay').value) || 30;
   if(!domain || !cipher){toast('请填写完整信息','warning');return}
-  const payload = {domain, cipher, encrypt, remain_day};
+  const payload = {domain, cipher, encrypt, remainDay};
   try{
     const btn = $('certSubmitBtn');
     btn.disabled = true;
