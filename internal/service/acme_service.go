@@ -95,7 +95,7 @@ func SendCode(ctx context.Context, username string) (any, error) {
 
 func ExistAcmeAccount(ctx context.Context, username string) (any, error) {
 	byUsername, err := repository.GetAcmeAccountByUsername(ctx, username)
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 	return byUsername != nil, nil
@@ -142,6 +142,7 @@ func CreateAcmeAccount(ctx context.Context, req *modle.AcmeAccountRegister) (any
 		Username:   req.Username,
 		Password:   password,
 		PrivateKey: privateKeyPath,
+		Remark:     "SUCCESS",
 	}
 	return repository.CreateAcmeAccount(ctx, acmeAccount)
 }
@@ -214,6 +215,7 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 		ctxAsync, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		acmeEncrypt.Status = 1
+		acmeEncrypt.Remark = "SUCCESS"
 		if acmeEncrypt.Encrypt != "" {
 			if err := acmeUser.LetsEncryptGenerate(ctxAsync, acmeEncrypt, true); err != nil {
 				acmeEncrypt.Status = 0
@@ -226,6 +228,13 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 			}
 			certInfo, err := util.GetLocalCertExpire(acmeEncrypt.Encrypt+"/"+acmeEncrypt.Domain+"_bundle"+".pem", acmeEncrypt.RemainDay)
 			if err != nil {
+				acmeEncrypt.Status = 0
+				acmeEncrypt.Remark = err.Error()
+				_, err = repository.CreateAcmeEncrypt(ctxAsync, acmeEncrypt)
+				if err != nil {
+					fmt.Printf("保存失败: %v\n", err)
+					return
+				}
 				fmt.Printf("读取pem证书文件，判断是否过期失败: %v\n", err)
 				return
 			}
@@ -248,6 +257,13 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 		}
 		certInfo, err := util.GetRemoteCertExpire(acmeEncrypt.Domain, acmeEncrypt.RemainDay)
 		if err != nil {
+			acmeEncrypt.Status = 0
+			acmeEncrypt.Remark = err.Error()
+			_, err = repository.UpdateAcmeEncrypt(ctxAsync, acmeEncrypt)
+			if err != nil {
+				fmt.Printf("保存失败: %v\n", err)
+				return
+			}
 			fmt.Printf("远程检测域名证书 domain 域名失败: %v\n", err)
 			return
 		}
@@ -299,6 +315,13 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 			}
 			certInfo, err := util.GetLocalCertExpire(resp.Encrypt+"/"+resp.Domain+"_bundle"+".pem", resp.RemainDay)
 			if err != nil {
+				resp.Status = 0
+				resp.Remark = err.Error()
+				_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
+				if err != nil {
+					fmt.Printf("保存失败: %v\n", err)
+					return
+				}
 				fmt.Printf("读取pem证书文件，判断是否过期失败: %v\n", err)
 				return
 			}
@@ -332,6 +355,24 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 		}
 	}()
 	return resp, nil
+}
+
+func DeleteAcmeEncrypt(ctx context.Context, domain string) (any, error) {
+	username, ok := ctx.Value("username").(string)
+	if !ok {
+		return nil, errors.New("invalid Token")
+	}
+	resp, err := repository.GetAcmeEncryptByDomain(ctx, domain)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Username != username {
+		return nil, errors.New("无权操作此记录")
+	}
+	if err := repository.DeleteAcmeEncryptByDomain(ctx, domain); err != nil {
+		return nil, err
+	}
+	return true, nil
 }
 
 func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
@@ -371,6 +412,13 @@ func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
 		}
 		certInfo, err := util.GetLocalCertExpire(resp.Encrypt+"/"+resp.Domain+"_bundle"+".pem", resp.RemainDay)
 		if err != nil {
+			resp.Status = 0
+			resp.Remark = err.Error()
+			_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
+			if err != nil {
+				fmt.Printf("保存失败: %v\n", err)
+				return
+			}
 			fmt.Printf("读取pem证书文件，判断是否过期失败: %v\n", err)
 			return
 		}

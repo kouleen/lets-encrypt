@@ -31,10 +31,12 @@ func (u *AcmeUser) GetPrivateKey() crypto.PrivateKey        { return u.PrivateKe
 
 func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, encrypt Encrypt, register bool) error {
 	cfg := lego.NewConfig(u)
-	// 测试环境（证书不被浏览器信任，调试用）
-	cfg.CADirURL = lego.LEDirectoryStaging
 	// 调试通过后切换生产环境
-	//cfg.CADirURL = lego.LEDirectoryProduction
+	cfg.CADirURL = lego.LEDirectoryProduction
+	if os.Getenv("ENV") == "dev" {
+		// 测试环境（证书不被浏览器信任，调试用）
+		cfg.CADirURL = lego.LEDirectoryStaging
+	}
 	cfg.Certificate.KeyType = certcrypto.RSA2048
 	client, err := lego.NewClient(cfg)
 	if err != nil {

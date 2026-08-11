@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"github.com/glebarez/sqlite"
@@ -70,10 +71,14 @@ func GetAcmeEncryptByDomain(ctx context.Context, domain string) (*modle.AcmeEncr
 }
 
 func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]modle.AcmeEncrypt, int64, error) {
+	username, ok := ctx.Value("username").(string)
+	if !ok {
+		return nil, 0, errors.New("invalid Token")
+	}
 	var list []modle.AcmeEncrypt
-	query := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{})
+	query := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{}).Where("username = ?", username)
 	if req.Domain != "" {
-		query = query.Where("domain = ?", req.Domain)
+		query = query.Where("domain like ?", "%"+req.Domain+"%")
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -98,4 +103,8 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 		return nil, err
 	}
 	return acmeEncrypt, nil
+}
+
+func DeleteAcmeEncryptByDomain(ctx context.Context, domain string) error {
+	return getSqliteDb().WithContext(ctx).Where("domain = ?", domain).Delete(&modle.AcmeEncrypt{}).Error
 }

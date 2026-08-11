@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kouleen/lets-encrypt/internal/modle"
@@ -17,7 +18,7 @@ func Auth() gin.HandlerFunc {
 		if authHeader == "" {
 			accessToken := c.Query("access_token")
 			if accessToken == "" {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				c.JSON(http.StatusUnauthorized, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": "Unauthorized"})
 				c.Abort()
 				return
 			}
@@ -25,25 +26,25 @@ func Auth() gin.HandlerFunc {
 		}
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": "Invalid Token"})
 			c.Abort()
 			return
 		}
 		tokenString := parts[1]
 		userHeaderJson, err := repository.GetCacheAuth(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
 			c.Abort()
 			return
 		}
 		if userHeaderJson == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": "Invalid Token"})
 			c.Abort()
 			return
 		}
 		if c.Request.Method == "POST" && c.Request.URL.Path == "/logout" {
 			if err := repository.DelCacheAuth(tokenString); err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				c.JSON(http.StatusUnauthorized, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
 				c.Abort()
 				return
 			}
@@ -53,7 +54,7 @@ func Auth() gin.HandlerFunc {
 		}
 		var acmeAccount modle.AcmeAccount
 		if err := json.Unmarshal([]byte(userHeaderJson), &acmeAccount); err != nil {
-			c.JSON(http.StatusInternalServerError, "Unmarshal err")
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": "Unmarshal err"})
 			c.Abort()
 			return
 		}

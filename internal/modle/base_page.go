@@ -1,8 +1,6 @@
 package modle
 
 type BasePage struct {
-	Current int   `json:"current"`
-	Size    int   `json:"size"`
 	Total   int64 `json:"total"`
 	Records any   `json:"records"`
 }
