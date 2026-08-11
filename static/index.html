@@ -428,6 +428,8 @@ body{
   border:1px solid var(--border);
 }
 .btn-ghost:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.btn-ghost:disabled{opacity:0.35;cursor:not-allowed}
+.btn-ghost:disabled:hover{background:transparent;color:var(--text-dim)}
 .btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
 
 .stats-grid{
@@ -1370,6 +1372,7 @@ function renderRecentCerts(){
       const days = calcRemainDays(c.expireTime);
       const rc = getRemainTagClass(days);
       const rt = days === null ? '未检测' : (days < 0 ? '已过期' : days+' 天');
+      const hasPath = !!c.encrypt;
       return `<tr>
         <td><span class="domain-cell">${c.domain}</span></td>
         <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
@@ -1377,7 +1380,8 @@ function renderRecentCerts(){
         <td><span class="remain-tag ${rc}">${rt}</span></td>
         <td><div class="action-btns">
           <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
-          <button class="btn btn-sm btn-ghost" onclick="openRefreshModal('${c.domain}')">刷新</button>
+          <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄</button>
+          <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
           <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">删除</button>
         </div></td>
       </tr>`;
@@ -1403,6 +1407,7 @@ function renderCertificates(){
     const days = calcRemainDays(c.expireTime);
     const remainClass = getRemainTagClass(days);
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
+    const hasPath = !!c.encrypt;
     return `<tr>
       <td><span class="domain-cell">${c.domain}</span></td>
       <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
@@ -1412,7 +1417,8 @@ function renderCertificates(){
       <td style="font-size:12px;color:var(--text-dim)">${c.encrypt||'未设置'}</td>
       <td><div class="action-btns">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
-        <button class="btn btn-sm btn-ghost" onclick="openRefreshModal('${c.domain}')">🔄</button>
+        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄</button>
+        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
         <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">🗑</button>
       </div></td>
     </tr>`;
@@ -1421,6 +1427,7 @@ function renderCertificates(){
     const days = calcRemainDays(c.expireTime);
     const remainClass = getRemainTagClass(days);
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
+    const hasPath = !!c.encrypt;
     return `<div class="mobile-cert-card">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
@@ -1434,7 +1441,8 @@ function renderCertificates(){
       </div>
       <div class="mobile-cert-actions">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">✏️ 编辑</button>
-        <button class="btn btn-sm btn-ghost" onclick="openRefreshModal('${c.domain}')">🔄 刷新</button>
+        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${hasPath?'刷新证书':'请先设置证书路径'}">🔄 刷新</button>
+        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️ 下载</button>
         <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">🗑 删除</button>
       </div>
     </div>`;
@@ -1484,9 +1492,38 @@ function openEditModal(domain){
 }
 
 function openRefreshModal(domain){
+  const cert = certList.find(c=>c.domain===domain);
+  if(!cert || !cert.encrypt){toast('请先设置证书路径','warning');return}
   refreshTargetDomain = domain;
   $('refreshDomain').textContent = domain;
   openModal('refreshModal');
+}
+
+async function downloadCert(domain){
+  const cert = certList.find(c=>c.domain===domain);
+  if(!cert || !cert.encrypt){toast('请先设置证书路径','warning');return}
+  try{
+    toast('正在准备下载...','info');
+    const token = localStorage.getItem('acme_token');
+    const url = '/acme/domain/download?domain='+encodeURIComponent(domain)+'&access_token='+encodeURIComponent(token||'');
+    const resp = await fetch(url);
+    if(!resp.ok){
+      const errData = await resp.json().catch(()=>({data:'下载失败'}));
+      throw new Error(errData.data || '下载失败');
+    }
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = domain + '_certs.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    toast('下载成功','success');
+  }catch(err){
+    toast(err.message,'error');
+  }
 }
 
 let deleteTargetDomain = null;

@@ -24,6 +24,7 @@ func Register(r *gin.Engine) {
 	{
 		domainGroup.GET("/page", api.PageAcme)
 		domainGroup.GET("/refresh", api.RefreshAcme)
+		domainGroup.GET("/download", api.DownloadAcme)
 		domainGroup.POST("/create", api.CreateAcme)
 		domainGroup.POST("/put", api.PutAcme)
 		domainGroup.DELETE("/delete", api.DeleteAcme)

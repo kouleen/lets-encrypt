@@ -1,6 +1,8 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -10,6 +12,7 @@ import (
 	"math/big"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -439,4 +442,59 @@ func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
 		}
 	}()
 	return resp, nil
+}
+
+func DownloadAcmeEncrypt(ctx context.Context, domain string) ([]byte, string, error) {
+	username, ok := ctx.Value("username").(string)
+	if !ok {
+		return nil, "", errors.New("invalid Token")
+	}
+	resp, err := repository.GetAcmeEncryptByDomain(ctx, domain)
+	if err != nil {
+		return nil, "", err
+	}
+	if resp.Username != username {
+		return nil, "", errors.New("无权操作此记录")
+	}
+	if resp.Encrypt == "" {
+		return nil, "", errors.New("证书路径为空，无法下载")
+	}
+
+	bundlePath := filepath.Join(resp.Encrypt, resp.Domain+"_bundle.pem")
+	keyPath := filepath.Join(resp.Encrypt, resp.Domain+".key")
+
+	bundleData, err := os.ReadFile(bundlePath)
+	if err != nil {
+		return nil, "", fmt.Errorf("读取证书链文件失败: %v", err)
+	}
+	keyData, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("读取私钥文件失败: %v", err)
+	}
+
+	zipBuf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(zipBuf)
+
+	fw, err := zipWriter.Create(resp.Domain + "_bundle.pem")
+	if err != nil {
+		return nil, "", err
+	}
+	if _, err = fw.Write(bundleData); err != nil {
+		return nil, "", err
+	}
+
+	fw, err = zipWriter.Create(resp.Domain + ".key")
+	if err != nil {
+		return nil, "", err
+	}
+	if _, err = fw.Write(keyData); err != nil {
+		return nil, "", err
+	}
+
+	if err := zipWriter.Close(); err != nil {
+		return nil, "", err
+	}
+
+	filename := resp.Domain + "_certs.zip"
+	return zipBuf.Bytes(), filename, nil
 }
