@@ -396,7 +396,7 @@ body{
   background-clip:text;
 }
 .page-subtitle{color:var(--text-dim);font-size:14px;margin-top:4px}
-.header-actions{display:flex;gap:12px}
+.header-actions{display:flex;gap:12px;flex-shrink:0}
 
 .btn{
   padding:10px 20px;
@@ -409,13 +409,31 @@ body{
   font-family:inherit;
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   gap:8px;
+  white-space:nowrap;
+  line-height:1.4;
+  box-sizing:border-box;
 }
-.btn-primary{
+.dashboard .btn-primary,
+.modal-overlay .btn-primary{
+  width:auto;
+  padding:10px 20px;
+  margin-top:0;
+  border-radius:10px;
+  font-size:13px;
   background:linear-gradient(135deg,var(--primary),var(--primary-light));
   color:#fff;
+  position:static;
+  overflow:visible;
+  min-height:40px;
 }
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(102,126,234,0.4)}
+.dashboard .btn-primary::after,
+.modal-overlay .btn-primary::after{display:none}
+.dashboard .btn-primary:hover,
+.modal-overlay .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(102,126,234,0.4)}
+.dashboard .btn,
+.modal-overlay .btn{min-height:40px}
 .btn-danger{
   background:rgba(255,107,107,0.15);
   color:var(--danger);
@@ -430,7 +448,7 @@ body{
 .btn-ghost:hover{background:rgba(255,255,255,0.05);color:var(--text)}
 .btn-ghost:disabled{opacity:0.35;cursor:not-allowed}
 .btn-ghost:disabled:hover{background:transparent;color:var(--text-dim)}
-.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;min-height:auto}
 
 .stats-grid{
   display:grid;
@@ -905,7 +923,7 @@ body{
           </div>
         </div>
         <div class="header-actions">
-          <button class="btn btn-ghost" onclick="loadCertificates()">🔄 刷新数据</button>
+          <button class="btn btn-ghost" onclick="refreshDashboard()">🔄 刷新数据</button>
           <button class="btn btn-primary" onclick="openModal('createModal')">➕ 创建证书</button>
         </div>
       </div>
@@ -1102,16 +1120,28 @@ function isMobile(){
   return window.innerWidth <= 768;
 }
 
+function updateUserInfo(){
+  const user = localStorage.getItem('acme_user');
+  if(user){
+    try{
+      const u = JSON.parse(user);
+      $('userName').textContent = u.username || '用户';
+      $('userAvatar').textContent = (u.username || 'U').charAt(0).toUpperCase();
+    }catch(e){
+      $('userName').textContent = '用户';
+      $('userAvatar').textContent = 'U';
+    }
+  } else {
+    $('userName').textContent = '用户';
+    $('userAvatar').textContent = 'U';
+  }
+}
+
 function checkAuth(){
   const saved = localStorage.getItem('acme_token');
   if(saved){
     currentToken = saved;
-    const user = localStorage.getItem('acme_user');
-    if(user){
-      const u = JSON.parse(user);
-      $('userName').textContent = u.username || '用户';
-      $('userAvatar').textContent = (u.username || 'U').charAt(0).toUpperCase();
-    }
+    updateUserInfo();
     showDashboard();
   }
 }
@@ -1127,7 +1157,7 @@ function showDashboard(){
     $('page-dashboard').style.display = 'block';
     $('page-certificates').style.display = 'none';
   }
-  loadCertificates();
+  refreshDashboard();
 }
 
 function switchAuth(type){
@@ -1188,6 +1218,7 @@ async function handleLogin(e){
     currentToken = token;
     localStorage.setItem('acme_token',token);
     localStorage.setItem('acme_user',JSON.stringify({username}));
+    updateUserInfo();
     toast('登录成功','success');
     showDashboard();
   }catch(err){
@@ -1281,6 +1312,7 @@ function logout(){
   localStorage.removeItem('acme_token');
   localStorage.removeItem('acme_user');
   currentToken = null;
+  updateUserInfo();
   $('dashboard').classList.remove('active');
   $('sidebar').classList.remove('open');
   $('sidebarOverlay').classList.remove('active');
@@ -1299,7 +1331,8 @@ function switchPage(page,el){
   const bottomBtns = document.querySelectorAll('#mobileBottomNav button');
   if(bottomBtns[0]) bottomBtns[0].classList.toggle('active',page==='dashboard');
   if(bottomBtns[1]) bottomBtns[1].classList.toggle('active',page==='certificates');
-  if(page==='certificates'){currentPage=1;loadCertificates()}
+  if(page==='dashboard'){refreshDashboard()}
+  else if(page==='certificates'){currentPage=1;loadCertificates()}
 }
 
 function formatDate(dateStr){
@@ -1337,6 +1370,11 @@ function canRefresh(c){
   if(days < 0) return {ok:true, reason:'证书已过期'};
   if(days <= c.remainDay) return {ok:true, reason:'即将到期'};
   return {ok:false, reason:`证书还有 ${days} 天到期，未到续期阈值（${c.remainDay} 天）`};
+}
+
+async function refreshDashboard(){
+  currentPage = 1;
+  await loadCertificates();
 }
 
 async function loadCertificates(){
