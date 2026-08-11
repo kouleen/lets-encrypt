@@ -83,6 +83,6 @@ jobs:
               "8099": "8099"
           },
           "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
-          "volumeBinds": ["/home/nginx/certs:/app/nginx/certs"],
+          "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
           "cmdOverride": []
         }'

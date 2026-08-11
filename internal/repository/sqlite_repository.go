@@ -69,8 +69,32 @@ func GetAcmeEncryptByDomain(ctx context.Context, domain string) (*modle.AcmeEncr
 	return acmeEncrypt, nil
 }
 
+func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]modle.AcmeEncrypt, int64, error) {
+	var list []modle.AcmeEncrypt
+	query := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{})
+	if req.Domain != "" {
+		query = query.Where("domain = ?", req.Domain)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	query = query.Order("create_time desc")
+	if err := query.Offset((req.Current - 1) * req.Size).Limit(req.Size).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
 func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any, error) {
 	if err := getSqliteDb().WithContext(ctx).Create(acmeEncrypt).Error; err != nil {
+		return nil, err
+	}
+	return acmeEncrypt, nil
+}
+
+func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any, error) {
+	if err := getSqliteDb().WithContext(ctx).Where("domain = ?", acmeEncrypt.Domain).Updates(acmeEncrypt).Error; err != nil {
 		return nil, err
 	}
 	return acmeEncrypt, nil

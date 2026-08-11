@@ -2,6 +2,12 @@ package modle
 
 import "time"
 
+type AcmeEncryptQuery struct {
+	Current int    `form:"current"`
+	Size    int    `form:"size"`
+	Domain  string `form:"domain"`
+}
+
 type AcmeEncryptRequest struct {
 	Domain    string `json:"domain" validate:"required"`     // 证书域名
 	Encrypt   string `json:"encrypt"`                        // 证书路径
@@ -22,6 +28,18 @@ type AcmeEncrypt struct {
 	UpdateTime *time.Time `json:"updateTime" gorm:"column:update_time;default:CURRENT_TIMESTAMP"`
 }
 
-func (AcmeEncrypt) TableName() string {
+func (p *AcmeEncrypt) TableName() string {
 	return "acme_encrypt"
+}
+
+func (p *AcmeEncrypt) GetDomain() string {
+	return p.Domain
+}
+
+func (p *AcmeEncrypt) GetEncrypt() string {
+	return p.Encrypt
+}
+
+func (p *AcmeEncrypt) GetCipher() string {
+	return p.Cipher
 }

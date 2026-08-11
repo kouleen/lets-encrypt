@@ -14,6 +14,11 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 )
 
+type Encrypt interface {
+	GetDomain() string
+	GetCipher() string
+	GetEncrypt() string
+}
 type AcmeUser struct {
 	Username     string
 	Registration *registration.Resource
@@ -24,7 +29,7 @@ func (u *AcmeUser) GetEmail() string                        { return u.Username 
 func (u *AcmeUser) GetRegistration() *registration.Resource { return u.Registration }
 func (u *AcmeUser) GetPrivateKey() crypto.PrivateKey        { return u.PrivateKey }
 
-func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, acmeEncrypt *AcmeEncrypt, register bool) error {
+func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, encrypt Encrypt, register bool) error {
 	cfg := lego.NewConfig(u)
 	// 测试环境（证书不被浏览器信任，调试用）
 	cfg.CADirURL = lego.LEDirectoryStaging
@@ -38,7 +43,7 @@ func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, acmeEncrypt *AcmeEnc
 	// 1. 配置 Cloudflare DNS 验证
 	cfConfig := cloudflare.NewDefaultConfig()
 	// 从环境变量读取 Token，也可以直接写 cfConfig.AuthToken = "xxx"
-	cfConfig.AuthToken = acmeEncrypt.Cipher
+	cfConfig.AuthToken = encrypt.GetCipher()
 	dnsProvider, err := cloudflare.NewDNSProviderConfig(cfConfig)
 	if err != nil {
 		return err
@@ -61,7 +66,7 @@ func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, acmeEncrypt *AcmeEnc
 		u.Registration = reg
 	}
 	request := certificate.ObtainRequest{
-		Domains: []string{acmeEncrypt.Domain},
+		Domains: []string{encrypt.GetDomain()},
 		Bundle:  true,
 	}
 	cert, err := client.Certificate.Obtain(request)
@@ -69,12 +74,12 @@ func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, acmeEncrypt *AcmeEnc
 		return err
 	}
 	log.Println("证书申请成功")
-	if err := os.MkdirAll(acmeEncrypt.Encrypt, 0700); err != nil {
+	if err := os.MkdirAll(encrypt.GetEncrypt(), 0700); err != nil {
 		return err
 	}
 	// 证书写入安全写法
-	certPath := filepath.Join(acmeEncrypt.Encrypt, acmeEncrypt.Domain+".pem")
-	keyPath := filepath.Join(acmeEncrypt.Encrypt, acmeEncrypt.Domain+".key")
+	certPath := filepath.Join(encrypt.GetEncrypt(), encrypt.GetDomain()+"_bundle"+".pem")
+	keyPath := filepath.Join(encrypt.GetEncrypt(), encrypt.GetDomain()+".key")
 
 	if err := safeWriteFile(certPath, cert.Certificate, 0644); err != nil {
 		return err
@@ -82,7 +87,7 @@ func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, acmeEncrypt *AcmeEnc
 	if err := safeWriteFile(keyPath, cert.PrivateKey, 0600); err != nil {
 		return err
 	}
-	log.Printf("证书已保存到当前目录: %s, %s", acmeEncrypt.Encrypt+acmeEncrypt.Domain+".pem", acmeEncrypt.Encrypt+acmeEncrypt.Domain+".key")
+	log.Printf("证书已保存到当前目录: %s, %s", encrypt.GetEncrypt()+encrypt.GetDomain()+"_bundle"+".pem", encrypt.GetEncrypt()+encrypt.GetDomain()+".key")
 	return nil
 }
 

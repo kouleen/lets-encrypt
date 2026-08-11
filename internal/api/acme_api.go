@@ -77,11 +77,18 @@ func Login(c *gin.Context) {
 }
 
 func PageAcme(c *gin.Context) {
-
-}
-
-func RefreshAcme(c *gin.Context) {
-
+	ctx := c.Request.Context()
+	var req modle.AcmeEncryptQuery
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	list, total, err := service.PageAcmeEncrypt(ctx, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, modle.ToPage(list, total))
 }
 
 func CreateAcme(c *gin.Context) {
@@ -110,5 +117,41 @@ func CreateAcme(c *gin.Context) {
 }
 
 func PutAcme(c *gin.Context) {
+	ctx := c.Request.Context()
+	var req modle.AcmeEncryptRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateStruct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	acmeEncrypt := &modle.AcmeEncrypt{
+		Encrypt:   req.Encrypt,
+		Cipher:    req.Cipher,
+		Domain:    req.Domain,
+		RemainDay: req.RemainDay,
+	}
+	resp, err := service.UpdateAcmeEncrypt(ctx, acmeEncrypt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
 
+func RefreshAcme(c *gin.Context) {
+	ctx := c.Request.Context()
+	domain := c.Query("domain")
+	if domain == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Domain is required"})
+		return
+	}
+	resp, err := service.RefreshAcmeEncrypt(ctx, domain)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
