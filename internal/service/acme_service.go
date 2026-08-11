@@ -158,7 +158,7 @@ func Login(ctx context.Context, req *modle.AcmeAccountLogin) (any, error) {
 	if err = bcrypt.CompareHashAndPassword([]byte(resp.Password), []byte(req.Password)); err != nil {
 		return nil, errors.New("用户名或密码错误")
 	}
-	bytes, err := json.Marshal(resp)
+	marshal, err := json.Marshal(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func Login(ctx context.Context, req *modle.AcmeAccountLogin) (any, error) {
 
 	token := fmt.Sprintf("%x-%x-%x-%x-%x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-	if err = repository.SetCacheAuth(token, string(bytes), time.Duration(24)*time.Hour); err != nil {
+	if err = repository.SetCacheAuth(token, string(marshal), time.Duration(24)*time.Hour); err != nil {
 		return nil, err
 	}
 	return token, nil
@@ -217,21 +217,25 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 	go func() {
 		ctxAsync, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		acmeEncrypt.Status = 1
+		v := uint8(1)
+		acmeEncrypt.Status = &v
 		acmeEncrypt.Remark = "SUCCESS"
 		if acmeEncrypt.Encrypt != "" {
 			if err := acmeUser.LetsEncryptGenerate(ctxAsync, acmeEncrypt, true); err != nil {
-				acmeEncrypt.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				acmeEncrypt.Remark = err.Error()
 				_, err = repository.CreateAcmeEncrypt(ctxAsync, acmeEncrypt)
 				if err != nil {
 					fmt.Printf("保存失败: %v\n", err)
 					return
 				}
+				return
 			}
 			certInfo, err := util.GetLocalCertExpire(acmeEncrypt.Encrypt+"/"+acmeEncrypt.Domain+"_bundle"+".pem", acmeEncrypt.RemainDay)
 			if err != nil {
-				acmeEncrypt.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				acmeEncrypt.Remark = err.Error()
 				_, err = repository.CreateAcmeEncrypt(ctxAsync, acmeEncrypt)
 				if err != nil {
@@ -248,7 +252,8 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 				return
 			}
 			if err = repository.ReloadConfig(ctxAsync, "nginx"); err != nil {
-				acmeEncrypt.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				acmeEncrypt.Remark = err.Error()
 				_, err = repository.UpdateAcmeEncrypt(ctxAsync, acmeEncrypt)
 				if err != nil {
@@ -260,7 +265,8 @@ func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 		}
 		certInfo, err := util.GetRemoteCertExpire(acmeEncrypt.Domain, acmeEncrypt.RemainDay)
 		if err != nil {
-			acmeEncrypt.Status = 0
+			e := uint8(0)
+			acmeEncrypt.Status = &e
 			acmeEncrypt.Remark = err.Error()
 			_, err = repository.UpdateAcmeEncrypt(ctxAsync, acmeEncrypt)
 			if err != nil {
@@ -305,20 +311,24 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 	go func() {
 		ctxAsync, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		resp.Status = 1
+		v := uint8(1)
+		resp.Status = &v
 		if resp.Encrypt != "" {
 			if err := acmeUser.LetsEncryptGenerate(ctxAsync, resp, false); err != nil {
-				resp.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				resp.Remark = err.Error()
 				_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 				if err != nil {
 					fmt.Printf("保存失败: %v\n", err)
 					return
 				}
+				return
 			}
 			certInfo, err := util.GetLocalCertExpire(resp.Encrypt+"/"+resp.Domain+"_bundle"+".pem", resp.RemainDay)
 			if err != nil {
-				resp.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				resp.Remark = err.Error()
 				_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 				if err != nil {
@@ -335,7 +345,8 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any
 				return
 			}
 			if err = repository.ReloadConfig(ctxAsync, "nginx"); err != nil {
-				resp.Status = 0
+				e := uint8(0)
+				acmeEncrypt.Status = &e
 				resp.Remark = err.Error()
 				_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 				if err != nil {
@@ -403,19 +414,23 @@ func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
 	go func() {
 		ctxAsync, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		resp.Status = 1
+		v := uint8(1)
+		resp.Status = &v
 		if err = acmeUser.LetsEncryptGenerate(ctxAsync, resp, false); err != nil {
-			resp.Status = 0
+			e := uint8(0)
+			resp.Status = &e
 			resp.Remark = err.Error()
 			_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 			if err != nil {
 				fmt.Printf("保存失败: %v\n", err)
 				return
 			}
+			return
 		}
 		certInfo, err := util.GetLocalCertExpire(resp.Encrypt+"/"+resp.Domain+"_bundle"+".pem", resp.RemainDay)
 		if err != nil {
-			resp.Status = 0
+			e := uint8(0)
+			resp.Status = &e
 			resp.Remark = err.Error()
 			_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 			if err != nil {
@@ -432,7 +447,8 @@ func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
 			return
 		}
 		if err = repository.ReloadConfig(ctxAsync, "nginx"); err != nil {
-			resp.Status = 0
+			e := uint8(0)
+			resp.Status = &e
 			resp.Remark = err.Error()
 			_, err = repository.UpdateAcmeEncrypt(ctxAsync, resp)
 			if err != nil {
