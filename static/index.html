@@ -822,7 +822,7 @@ body{
     <form id="registerForm" style="display:none" onsubmit="return handleRegister(event)">
       <div class="form-group">
         <label class="form-label">邮箱</label>
-        <input type="email" class="form-input" id="regEmail" placeholder="your@email.com" required onbluff="checkExist()">
+        <input type="email" class="form-input" id="regEmail" placeholder="your@email.com" required onblur="checkExist()">
         <div id="existHint" style="font-size:12px;margin-top:6px"></div>
       </div>
       <div class="form-group">
@@ -1179,7 +1179,6 @@ async function handleLogin(e){
     $('loginBtn').innerHTML = '<span class="loading-spinner"></span> 登录中...';
     const token = await api('POST','/acme/login',{username,password});
     currentToken = token;
-    const accountData = await api('GET','/acme/exist?username='+encodeURIComponent(username));
     localStorage.setItem('acme_token',token);
     localStorage.setItem('acme_user',JSON.stringify({username}));
     toast('登录成功','success');
@@ -1199,6 +1198,7 @@ async function sendCode(){
   const email = $('regEmail').value.trim();
   if(!email){toast('请输入邮箱','warning');return}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('邮箱格式不正确','warning');return}
+  if(existChecked){toast('该邮箱已注册，请直接登录','warning');return}
   try{
     $('sendCodeBtn').disabled = true;
     $('sendCodeBtn').textContent = '发送中...';
@@ -1225,10 +1225,13 @@ async function sendCode(){
 let existChecked = false;
 async function checkExist(){
   const email = $('regEmail').value.trim();
-  if(!email){return}
+  const hint = $('existHint');
+  if(!email){hint.textContent='';existChecked=false;return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){hint.textContent='';existChecked=false;return}
+  hint.textContent = '检查中...';
+  hint.style.color = 'var(--text-dim)';
   try{
     const exists = await api('GET','/acme/exist?username='+encodeURIComponent(email));
-    const hint = $('existHint');
     if(exists){
       hint.textContent = '该邮箱已注册，请直接登录';
       hint.style.color = 'var(--warning)';
@@ -1238,7 +1241,10 @@ async function checkExist(){
       hint.style.color = 'var(--success)';
       existChecked = false;
     }
-  }catch(err){}
+  }catch(err){
+    hint.textContent = '';
+    existChecked = false;
+  }
 }
 
 async function handleRegister(e){
