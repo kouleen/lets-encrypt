@@ -1408,7 +1408,7 @@ function renderCertificates(){
       <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
       <td class="expire-info ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
       <td><span class="remain-tag ${remainClass}">${remainText}</span></td>
-      <td>${c.remain_day} 天</td>
+      <td>${c.remainDay} 天</td>
       <td style="font-size:12px;color:var(--text-dim)">${c.encrypt||'未设置'}</td>
       <td><div class="action-btns">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
@@ -1429,7 +1429,7 @@ function renderCertificates(){
       <div class="mobile-cert-info">
         <div><div class="label">过期时间</div><div class="value ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</div></div>
         <div><div class="label">剩余天数</div><div class="value"><span class="remain-tag ${remainClass}">${remainText}</span></div></div>
-        <div><div class="label">续期阈值</div><div class="value">${c.remain_day} 天</div></div>
+        <div><div class="label">续期阈值</div><div class="value">${c.remainDay} 天</div></div>
         <div><div class="label">证书路径</div><div class="value" style="font-size:11px;word-break:break-all">${c.encrypt||'未设置'}</div></div>
       </div>
       <div class="mobile-cert-actions">
@@ -1477,7 +1477,7 @@ function openEditModal(domain){
   $('certDomain').disabled = true;
   $('certCipher').value = cert.cipher || '';
   $('certEncrypt').value = cert.encrypt || '';
-  $('certRemainDay').value = cert.remain_day;
+  $('certRemainDay').value = cert.remainDay;
   $('certSubmitBtn').textContent = '保存修改';
   $('certFormMessage').className = 'form-message';
   openModal('createModal');
