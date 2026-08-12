@@ -610,14 +610,14 @@ DELETE /acme/domain/delete?domain=example.com
 
 ### AcmeEncrypt（证书记录）
 
-| 字段        | 类型       | JSON 标签  | 说明                                           |
-| ----------- | ---------- | ---------- | ---------------------------------------------- |
+| 字段        | 类型       | JSON 标签    | 说明                                           |
+| ----------- | ---------- |------------| ---------------------------------------------- |
 | id          | int64      | id,string  | 主键（Snowflake 生成，序列化为字符串）         |
 | username    | string     | username   | 所属用户                                       |
 | cipher      | string     | -          | Cloudflare API Token（不对外暴露 JSON 序列化） |
 | encrypt     | string     | encrypt    | 证书存储目录路径                               |
 | domain      | string     | domain     | 证书对应的域名                                 |
-| remain_day  | int        | remain_day | 续期阈值（剩余天数 ≤ 此值时触发续期）         |
+| remain_day  | int        | remainDay  | 续期阈值（剩余天数 ≤ 此值时触发续期）         |
 | expire_time | *time.Time | expireTime | 证书过期时间（指针，可为空）                   |
 | status      | uint8      | status     | 状态：1=处理中/成功，0=失败                    |
 | remark      | string     | remark     | 备注或错误信息                                 |
@@ -650,12 +650,12 @@ DELETE /acme/domain/delete?domain=example.com
 
 **AcmeEncryptRequest（证书创建/更新请求）**
 
-| 字段       | 类型   | JSON 标签  | 校验规则 |
-| ---------- | ------ | ---------- | -------- |
-| domain     | string | domain     | required |
-| encrypt    | string | encrypt    | -        |
-| cipher     | string | cipher     | required |
-| remain_day | int    | remain_day | required |
+| 字段        | 类型   | JSON 标签   | 校验规则 |
+|-----------| ------ |-----------| -------- |
+| domain    | string | domain    | required |
+| encrypt   | string | encrypt   | -        |
+| cipher    | string | cipher    | required |
+| remainDay | int    | remainDay | required |
 
 **AcmeEncryptQuery（分页查询请求）**
 
@@ -737,7 +737,7 @@ Cloudflare DNS-01 验证（cfConfig.AuthToken = cipher）
 
 - **本地检测**：`GetLocalCertExpire()` — 读取 PEM 文件中的 `NotAfter` 字段
 - **远程检测**：`GetRemoteCertExpire()` — TLS 直连域名 443 端口获取证书
-- **续期条件**：`remainDay <= remain_day` 时视为需要续期
+- **续期条件**：`remainDay <= remainDay` 时视为需要续期
 
 ## Docker 集成说明
 
