@@ -15,7 +15,7 @@ type AcmeAccountLogin struct {
 
 type AcmeAccount struct {
 	ID         int64      `json:"id,string" gorm:"column:id;primary_key;not null"`
-	Username   string     `json:"username" gorm:"column:username;not null;uniqueIndex:uq_acme_encrypt_username"`
+	Username   string     `json:"username" gorm:"column:username;not null;uniqueIndex:uq_acme_account_username"`
 	Password   string     `json:"-" gorm:"column:password;not null"`
 	PrivateKey string     `json:"-" gorm:"column:private_key;not null"`
 	Remark     string     `json:"remark" gorm:"column:remark;default:''"`

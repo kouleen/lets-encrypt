@@ -91,14 +91,14 @@ func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]modle.
 	return list, total, nil
 }
 
-func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any, error) {
+func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (*modle.AcmeEncrypt, error) {
 	if err := getSqliteDb().WithContext(ctx).Create(acmeEncrypt).Error; err != nil {
 		return nil, err
 	}
 	return acmeEncrypt, nil
 }
 
-func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (any, error) {
+func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (*modle.AcmeEncrypt, error) {
 	if err := getSqliteDb().WithContext(ctx).Where("domain = ?", acmeEncrypt.Domain).Updates(acmeEncrypt).Error; err != nil {
 		return nil, err
 	}

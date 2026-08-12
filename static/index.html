@@ -1372,6 +1372,14 @@ function canRefresh(c){
   return {ok:false, reason:`证书还有 ${days} 天到期，未到续期阈值（${c.remainDay} 天）`};
 }
 
+function getStatusTitle(c){
+  if(c.status === 1){
+    if(c.remark && c.remark !== 'SUCCESS') return '备注: ' + c.remark;
+    return '运行正常';
+  }
+  return (c.remark ? '❌ ' + c.remark : '❌ 状态异常');
+}
+
 async function refreshDashboard(){
   currentPage = 1;
   await loadCertificates();
@@ -1430,7 +1438,7 @@ function renderRecentCerts(){
       const ref = canRefresh(c);
       return `<tr>
         <td><span class="domain-cell">${c.domain}</span></td>
-        <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
+        <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
         <td class="expire-info">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
         <td><span class="remain-tag ${rc}">${rt}</span></td>
         <td><div class="action-btns">
@@ -1452,7 +1460,7 @@ function renderRecentCerts(){
     return `<div class="mobile-cert-card">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
-        <span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
+        <span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
       </div>
       <div class="mobile-cert-info">
         <div><div class="label">过期时间</div><div class="value">${c.expireTime?formatDate(c.expireTime):'未检测'}</div></div>
@@ -1491,7 +1499,7 @@ function renderCertificates(){
     const ref = canRefresh(c);
     return `<tr>
       <td><span class="domain-cell">${c.domain}</span></td>
-      <td><span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
+      <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
       <td class="expire-info ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
       <td><span class="remain-tag ${remainClass}">${remainText}</span></td>
       <td>${c.remainDay} 天</td>
@@ -1513,7 +1521,7 @@ function renderCertificates(){
     return `<div class="mobile-cert-card">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
-        <span class="status-badge ${c.status===1?'active':'inactive'}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
+        <span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
       </div>
       <div class="mobile-cert-info">
         <div><div class="label">过期时间</div><div class="value ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</div></div>
