@@ -250,6 +250,8 @@ body{
   margin-bottom:12px;
   backdrop-filter:blur(10px);
 }
+.mobile-cert-card.warning-card{background:rgba(255,217,61,0.08);border-color:rgba(255,217,61,0.3)}
+.mobile-cert-card.danger-card{background:rgba(255,107,107,0.08);border-color:rgba(255,107,107,0.3)}
 .mobile-cert-header{
   display:flex;
   align-items:center;
@@ -563,6 +565,10 @@ body{
 }
 .data-table tbody tr{transition:background 0.2s}
 .data-table tbody tr:hover{background:rgba(102,126,234,0.05)}
+.data-table tbody tr.warning-row{background:rgba(255,217,61,0.08)}
+.data-table tbody tr.warning-row:hover{background:rgba(255,217,61,0.15)}
+.data-table tbody tr.danger-row{background:rgba(255,107,107,0.08)}
+.data-table tbody tr.danger-row:hover{background:rgba(255,107,107,0.15)}
 .data-table tbody tr:last-child td{border-bottom:none}
 .domain-cell{font-weight:600;color:var(--text)}
 .domain-cell::before{content:'🔒 ';opacity:0.7}
@@ -1363,6 +1369,14 @@ function getRemainTagClass(days){
   return 'safe';
 }
 
+function getRowClass(c){
+  const days = calcRemainDays(c.expireTime);
+  if(days === null) return '';
+  if(days < 0) return 'danger-row';
+  if(days < c.remainDay) return 'warning-row';
+  return '';
+}
+
 function canRefresh(c){
   if(!c.encrypt) return {ok:false, reason:'请先设置证书路径'};
   const days = calcRemainDays(c.expireTime);
@@ -1436,7 +1450,7 @@ function renderRecentCerts(){
       const rt = days === null ? '未检测' : (days < 0 ? '已过期' : days+' 天');
       const hasPath = !!c.encrypt;
       const ref = canRefresh(c);
-      return `<tr>
+      return `<tr class="${getRowClass(c)}">
         <td><span class="domain-cell">${c.domain}</span></td>
         <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
         <td class="expire-info">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
@@ -1457,7 +1471,7 @@ function renderRecentCerts(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
-    return `<div class="mobile-cert-card">
+    return `<div class="mobile-cert-card ${getRowClass(c).replace('row','card')}">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
         <span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
@@ -1497,7 +1511,7 @@ function renderCertificates(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
-    return `<tr>
+    return `<tr class="${getRowClass(c)}">
       <td><span class="domain-cell">${c.domain}</span></td>
       <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
       <td class="expire-info ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
@@ -1518,7 +1532,7 @@ function renderCertificates(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
-    return `<div class="mobile-cert-card">
+    return `<div class="mobile-cert-card ${getRowClass(c).replace('row','card')}">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
         <span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span>
