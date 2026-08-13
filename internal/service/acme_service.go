@@ -300,6 +300,9 @@ func UpdateAuto(ctx context.Context, req *modle.AcmeEncryptAuto) (any, error) {
 	if resp.Username != username {
 		return nil, errors.New("无权操作此记录")
 	}
+	if resp.Encrypt == "" && *req.Auto == 1 {
+		return nil, errors.New("证书路径为空，开启失败")
+	}
 	if err = repository.UpdateAuto(ctx, req.Domain, req.Auto); err != nil {
 		return nil, err
 	}
