@@ -600,6 +600,63 @@ body{
 .remain-tag.safe{background:rgba(0,242,254,0.15);color:var(--success)}
 .remain-tag.warning{background:rgba(255,217,61,0.15);color:var(--warning)}
 .remain-tag.danger{background:rgba(255,107,107,0.15);color:var(--danger)}
+.toggle-switch{
+  position:relative;
+  display:inline-block;
+  width:38px;
+  height:20px;
+  vertical-align:middle;
+}
+.toggle-switch input{
+  opacity:0;
+  width:0;
+  height:0;
+}
+.toggle-slider{
+  position:absolute;
+  cursor:pointer;
+  inset:0;
+  background:rgba(255,255,255,0.1);
+  border:1px solid var(--border);
+  transition:0.3s;
+  border-radius:20px;
+}
+.toggle-slider:before{
+  content:'';
+  position:absolute;
+  height:14px;
+  width:14px;
+  left:2px;
+  bottom:2px;
+  background:#888;
+  transition:0.3s;
+  border-radius:50%;
+}
+.toggle-switch input:checked + .toggle-slider{
+  background:rgba(102,126,234,0.4);
+  border-color:var(--primary);
+}
+.toggle-switch input:checked + .toggle-slider:before{
+  transform:translateX(18px);
+  background:#fff;
+}
+.data-table td:nth-child(6),.data-table td:nth-child(7){text-align:center}
+.data-table th:nth-child(6),.data-table th:nth-child(7){text-align:center}
+.toggle-switch{vertical-align:middle}
+.data-table td:nth-child(8){color:var(--text-dim);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toggle-switch input:disabled + .toggle-slider{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+.toggle-label{
+  font-size:12px;
+  color:var(--text-dim);
+  margin-left:6px;
+  vertical-align:middle;
+  cursor:pointer;
+}
+.toggle-label.on{color:var(--success)}
+.toggle-cell{display:flex;align-items:center;gap:4px;white-space:nowrap}
 .cipher-mask{
   font-family:monospace;
   font-size:12px;
@@ -1007,6 +1064,8 @@ body{
                 <th>过期时间</th>
                 <th>剩余天数</th>
                 <th>续期阈值</th>
+                <th>自动续期</th>
+                <th>邮件通知</th>
                 <th>证书路径</th>
                 <th>操作</th>
               </tr>
@@ -1394,6 +1453,26 @@ function getStatusTitle(c){
   return (c.remark ? '❌ ' + c.remark : '❌ 状态异常');
 }
 
+function toggleAuto(domain, el){
+  const auto = el.checked ? 1 : 0;
+  api('PUT','/acme/domain/updateAuto',{domain,auto}).then(()=>{
+    toast(`自动续期已${auto?'开启':'关闭'}`,'success');
+  }).catch(err=>{
+    el.checked = !el.checked;
+    toast(err.message,'error');
+  });
+}
+
+function toggleNotice(domain, el){
+  const notice = el.checked ? 1 : 0;
+  api('PUT','/acme/domain/updateNotice',{domain,notice}).then(()=>{
+    toast(`邮件通知已${notice?'开启':'关闭'}`,'success');
+  }).catch(err=>{
+    el.checked = !el.checked;
+    toast(err.message,'error');
+  });
+}
+
 async function refreshDashboard(){
   currentPage = 1;
   await loadCertificates();
@@ -1443,22 +1522,25 @@ function renderRecentCerts(){
   const table = document.createElement('table');
   table.className = 'data-table';
   table.innerHTML = `
-    <thead><tr><th>域名</th><th>状态</th><th>过期时间</th><th>剩余</th><th>操作</th></tr></thead>
+    <thead><tr><th>域名</th><th>状态</th><th>过期时间</th><th>续期阈值</th><th>自动续期</th><th>邮件通知</th><th>操作</th></tr></thead>
     <tbody>${recent.map(c => {
       const days = calcRemainDays(c.expireTime);
       const rc = getRemainTagClass(days);
       const rt = days === null ? '未检测' : (days < 0 ? '已过期' : days+' 天');
       const hasPath = !!c.encrypt;
       const ref = canRefresh(c);
+      const autoChecked = c.auto === 1 ? 'checked' : '';
+      const noticeChecked = c.notice === 1 ? 'checked' : '';
       return `<tr class="${getRowClass(c)}">
         <td><span class="domain-cell">${c.domain}</span></td>
         <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
-        <td class="expire-info">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
-        <td><span class="remain-tag ${rc}">${rt}</span></td>
+        <td class="expire-info">${c.expireTime?formatDate(c.expireTime):'未检测'} <span class="remain-tag ${rc}">${rt}</span></td>
+        <td>${c.remainDay} 天</td>
+        <td><label class="toggle-switch"><input type="checkbox" ${autoChecked} onchange="toggleAuto('${c.domain}',this)"><span class="toggle-slider"></span></label></td>
+        <td><label class="toggle-switch"><input type="checkbox" ${noticeChecked} onchange="toggleNotice('${c.domain}',this)"><span class="toggle-slider"></span></label></td>
         <td><div class="action-btns">
           <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
           <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄</button>
-          <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
           <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')">删除</button>
         </div></td>
       </tr>`;
@@ -1471,6 +1553,8 @@ function renderRecentCerts(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
+    const autoChecked = c.auto === 1 ? 'checked' : '';
+    const noticeChecked = c.notice === 1 ? 'checked' : '';
     return `<div class="mobile-cert-card ${getRowClass(c).replace('row','card')}">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
@@ -1480,12 +1564,13 @@ function renderRecentCerts(){
         <div><div class="label">过期时间</div><div class="value">${c.expireTime?formatDate(c.expireTime):'未检测'}</div></div>
         <div><div class="label">剩余天数</div><div class="value"><span class="remain-tag ${remainClass}">${remainText}</span></div></div>
         <div><div class="label">续期阈值</div><div class="value">${c.remainDay} 天</div></div>
+        <div><div class="label">自动续期</div><div class="value"><label class="toggle-switch"><input type="checkbox" ${autoChecked} onchange="toggleAuto('${c.domain}',this)"><span class="toggle-slider"></span></label></div></div>
+        <div><div class="label">邮件通知</div><div class="value"><label class="toggle-switch"><input type="checkbox" ${noticeChecked} onchange="toggleNotice('${c.domain}',this)"><span class="toggle-slider"></span></label></div></div>
         <div><div class="label">证书路径</div><div class="value" style="font-size:11px;word-break:break-all">${c.encrypt||'未设置'}</div></div>
       </div>
       <div class="mobile-cert-actions">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')" title="编辑">✏️</button>
         <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄</button>
-        <button class="btn btn-sm btn-ghost" ${hasPath?'':'disabled'} onclick="downloadCert('${c.domain}')" title="${hasPath?'下载证书':'请先设置证书路径'}">⬇️</button>
         <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.domain}')" title="删除">🗑</button>
       </div>
     </div>`;
@@ -1511,13 +1596,17 @@ function renderCertificates(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
+    const autoChecked = c.auto === 1 ? 'checked' : '';
+    const noticeChecked = c.notice === 1 ? 'checked' : '';
     return `<tr class="${getRowClass(c)}">
       <td><span class="domain-cell">${c.domain}</span></td>
       <td><span class="status-badge ${c.status===1?'active':'inactive'}" title="${getStatusTitle(c)}"><span class="status-dot"></span>${c.status===1?'有效':'异常'}</span></td>
       <td class="expire-info ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</td>
       <td><span class="remain-tag ${remainClass}">${remainText}</span></td>
       <td>${c.remainDay} 天</td>
-      <td style="font-size:12px;color:var(--text-dim)">${c.encrypt||'未设置'}</td>
+      <td><label class="toggle-switch"><input type="checkbox" ${autoChecked} onchange="toggleAuto('${c.domain}',this)"><span class="toggle-slider"></span></label></td>
+      <td><label class="toggle-switch"><input type="checkbox" ${noticeChecked} onchange="toggleNotice('${c.domain}',this)"><span class="toggle-slider"></span></label></td>
+      <td title="${c.encrypt||'未设置'}">${c.encrypt||'未设置'}</td>
       <td><div class="action-btns">
         <button class="btn btn-sm btn-primary" onclick="openEditModal('${c.domain}')">编辑</button>
         <button class="btn btn-sm btn-ghost" ${ref.ok?'':'disabled'} onclick="openRefreshModal('${c.domain}')" title="${ref.reason}">🔄</button>
@@ -1532,6 +1621,8 @@ function renderCertificates(){
     const remainText = days === null ? '未检测' : (days < 0 ? '已过期' : days + ' 天');
     const hasPath = !!c.encrypt;
     const ref = canRefresh(c);
+    const autoChecked = c.auto === 1 ? 'checked' : '';
+    const noticeChecked = c.notice === 1 ? 'checked' : '';
     return `<div class="mobile-cert-card ${getRowClass(c).replace('row','card')}">
       <div class="mobile-cert-header">
         <span class="mobile-cert-domain">🔒 ${c.domain}</span>
@@ -1541,6 +1632,8 @@ function renderCertificates(){
         <div><div class="label">过期时间</div><div class="value ${days!==null && days<7?'expire-danger':(days!==null&&days<30?'expire-warning':'')}">${c.expireTime?formatDate(c.expireTime):'未检测'}</div></div>
         <div><div class="label">剩余天数</div><div class="value"><span class="remain-tag ${remainClass}">${remainText}</span></div></div>
         <div><div class="label">续期阈值</div><div class="value">${c.remainDay} 天</div></div>
+        <div><div class="label">自动续期</div><div class="value"><label class="toggle-switch"><input type="checkbox" ${autoChecked} onchange="toggleAuto('${c.domain}',this)"><span class="toggle-slider"></span></label></div></div>
+        <div><div class="label">邮件通知</div><div class="value"><label class="toggle-switch"><input type="checkbox" ${noticeChecked} onchange="toggleNotice('${c.domain}',this)"><span class="toggle-slider"></span></label></div></div>
         <div><div class="label">证书路径</div><div class="value" style="font-size:11px;word-break:break-all">${c.encrypt||'未设置'}</div></div>
       </div>
       <div class="mobile-cert-actions">

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -14,6 +15,9 @@ import (
 var cli *client.Client
 
 func init() {
+	if os.Getenv("ENV") == "dev" {
+		return
+	}
 	clientWithOpts, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatal("docker in docker 连接失败: %w", err)
@@ -31,6 +35,9 @@ func getClient() *client.Client {
 }
 
 func ReloadConfig(ctx context.Context, containerName string) error {
+	if os.Getenv("ENV") == "dev" {
+		return nil
+	}
 	log.Printf("start exec cmd container: %s", containerName)
 	execOptions := container.ExecOptions{
 		Cmd:          []string{"nginx", "-t"},

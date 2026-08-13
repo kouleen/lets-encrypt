@@ -160,6 +160,44 @@ func RefreshAcme(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "timestamp": time.Now().UnixMilli(), "data": resp})
 }
 
+func UpdateAuto(c *gin.Context) {
+	ctx := c.Request.Context()
+	var req modle.AcmeEncryptAuto
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	if err := validator.ValidateStruct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	resp, err := service.UpdateAuto(ctx, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "timestamp": time.Now().UnixMilli(), "data": resp})
+}
+
+func UpdateNotice(c *gin.Context) {
+	ctx := c.Request.Context()
+	var req modle.AcmeEncryptNotice
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	if err := validator.ValidateStruct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	resp, err := service.UpdateNotice(ctx, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "timestamp": time.Now().UnixMilli(), "data": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "timestamp": time.Now().UnixMilli(), "data": resp})
+}
+
 func DeleteAcme(c *gin.Context) {
 	ctx := c.Request.Context()
 	domain := c.Query("domain")
