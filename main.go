@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/kouleen/lets-encrypt/internal/repository"
 	"github.com/kouleen/lets-encrypt/internal/routes"
+	_ "github.com/kouleen/lets-encrypt/internal/task"
 	_ "github.com/kouleen/lets-encrypt/pkg/util"
 )
 

@@ -70,12 +70,12 @@ func GetAcmeEncryptByDomain(ctx context.Context, domain string) (*modle.AcmeEncr
 	return acmeEncrypt, nil
 }
 
-func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]modle.AcmeEncrypt, int64, error) {
+func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]*modle.AcmeEncrypt, int64, error) {
 	username, ok := ctx.Value("username").(string)
 	if !ok {
 		return nil, 0, errors.New("invalid Token")
 	}
-	var list []modle.AcmeEncrypt
+	var list []*modle.AcmeEncrypt
 	query := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{}).Where("username = ?", username)
 	if req.Domain != "" {
 		query = query.Where("domain like ?", "%"+req.Domain+"%")
@@ -91,6 +91,28 @@ func PageAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]modle.
 	return list, total, nil
 }
 
+func ListAcmeEncrypt(ctx context.Context, req *modle.AcmeEncryptQuery) ([]*modle.AcmeEncrypt, error) {
+	var list []*modle.AcmeEncrypt
+	query := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{})
+	if req.Status != nil {
+		query = query.Where("status = ?", *req.Status)
+	}
+	if req.Auto != nil {
+		query = query.Where("auto = ?", *req.Auto)
+	}
+	if req.Notice != nil {
+		query = query.Where("notice = ?", *req.Notice)
+	}
+	if req.Domain != "" {
+		query = query.Where("domain like ?", "%"+req.Domain+"%")
+	}
+	query = query.Order("create_time desc")
+	if err := query.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func CreateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (*modle.AcmeEncrypt, error) {
 	if err := getSqliteDb().WithContext(ctx).Create(acmeEncrypt).Error; err != nil {
 		return nil, err
@@ -103,6 +125,20 @@ func UpdateAcmeEncrypt(ctx context.Context, acmeEncrypt *modle.AcmeEncrypt) (*mo
 		return nil, err
 	}
 	return acmeEncrypt, nil
+}
+
+func UpdateAuto(ctx context.Context, domain string, auto *uint8) error {
+	if err := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{}).Where("domain = ?", domain).UpdateColumn("auto", auto).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateNotice(ctx context.Context, domain string, notice *uint8) error {
+	if err := getSqliteDb().WithContext(ctx).Model(&modle.AcmeEncrypt{}).Where("domain = ?", domain).UpdateColumn("notice", notice).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func DeleteAcmeEncryptByDomain(ctx context.Context, domain string) error {

@@ -9,6 +9,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-acme/lego/v4 v4.35.2
 	github.com/go-playground/validator/v10 v10.30.1
+	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.54.0
 	gorm.io/gorm v1.31.2
 )
