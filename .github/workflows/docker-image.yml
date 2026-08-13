@@ -2,85 +2,119 @@ name: GitHub Docker Image CI
 on:
   push:
     branches: [ "release" ]
+  pull_request:
+    branches: ["release"]
+
+permissions:
+  contents: write  # 必须！action打release上传二进制需要该权限
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    # 拉取代码
-    - name: Checkout code
-      id: checkout
-      uses: actions/checkout@v4
+      # 拉取代码
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    # 初始化Docker构建工具
-    - name: Set up Docker
-      id: setup_docker
-      uses: docker/setup-buildx-action@v3
-      
-    # 登录Docker Hub
-    - name: Login to Docker Hub
-      id: docker_login
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        
-    # 构建镜像并推送到 hub.docker.com kouleen/golive-server:latest
-    - name: Build and push Docker image
-      id: docker_build
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true # 构建完成自动推送
-        tags: kouleen/lets-encrypt:latest
-      #run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build go binary linux amd64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o lets-encrypt-linux-amd64 ./cmd/main.go
+
+      # 初始化Docker构建工具
+      - name: Set up Docker
+        id: setup_docker
+        uses: docker/setup-buildx-action@v3
+
+      # 登录Docker Hub
+      - name: Login to Docker Hub
+        id: docker_login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 构建镜像并推送到 hub.docker.com
+      - name: Build and push Docker image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: kouleen/lets-encrypt:latest
 
       # 仅构建失败时，赋值失败阶段+备注到环境变量
-    - name: Set Fail Info Env
-      id: set_fail_env
-      if: always()
-      run: |
-        if [[ "${{ steps.checkout.outcome }}" == "failure" ]]; then
-          echo "fail_msg=actions/checkout拉取代码失败" >> $GITHUB_ENV
-        elif [[ "${{ steps.setup_docker.outcome }}" == "failure" ]]; then
-          echo "fail_msg=buildx工具初始化失败" >> $GITHUB_ENV
-        elif [[ "${{ steps.docker_login.outcome }}" == "failure" ]]; then
-          echo "fail_msg=Docker账号密码密钥错误，登录仓库失败" >> $GITHUB_ENV
-        elif [[ "${{ steps.docker_build.outcome }}" == "failure" ]]; then
-          echo "fail_stage=Docker镜像构建推送" >> $GITHUB_ENV
-          echo "fail_msg=Docker镜像构建推送失败" >> $GITHUB_ENV
-        else
-          echo "fail_msg=流水线未发现异常" >> $GITHUB_ENV
-        fi
+      - name: Set Fail Info Env
+        id: set_fail_env
+        if: always()
+        run: |
+          if [[ "${{ steps.checkout.outcome }}" == "failure" ]]; then
+            echo "fail_msg=actions/checkout拉取代码失败" >> $GITHUB_ENV
+          elif [[ "${{ steps.setup_docker.outcome }}" == "failure" ]]; then
+            echo "fail_msg=buildx工具初始化失败" >> $GITHUB_ENV
+          elif [[ "${{ steps.docker_login.outcome }}" == "failure" ]]; then
+            echo "fail_msg=Docker账号密码密钥错误，登录仓库失败" >> $GITHUB_ENV
+          elif [[ "${{ steps.docker_build.outcome }}" == "failure" ]]; then
+            echo "fail_stage=Docker镜像构建推送" >> $GITHUB_ENV
+            echo "fail_msg=Docker镜像构建推送失败" >> $GITHUB_ENV
+          else
+            echo "fail_msg=流水线未发现异常" >> $GITHUB_ENV
+          fi
 
-    - name: Call Custom Callback API
-      if : always()
-      run: |
-        curl -X POST "https://www.kouleen.cn/api/docker/webhook/put" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "runId": "${{ github.run_id }}",
-          "imageName": "kouleen/lets-encrypt:latest",
-          "containerName": "lets-encrypt",
-          "branch": "${{ github.ref_name }}",
-          "repo": "${{ github.repository }}",
-          "htmlUrl": "${{ github.event.repository.html_url }}",
-          "cloneUrl": "${{ github.event.repository.clone_url }}",
-          "sshUrl": "${{ github.event.repository.ssh_url }}",
-          "status": "${{ job.status }}",
-          "actor": "${{ github.actor }}",
-          "commitMessage": "${{ github.event.head_commit.message }}",
-          "workflow": "${{ github.workflow }}",
-          "triggerType": "${{ github.event_name }}",
-          "failRemark": "${{ env.fail_msg }}",
-          "networkMode": "",
-          "restartPolicy": "",
-          "removeOldExist": true,
-          "enableIT": true,
-          "portMapping": {
-              "8099": "8099"
-          },
-          "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
-          "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
-          "cmdOverride": []
-        }'
+      - name: Create GitHub Release & Upload binary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ github.sha }}
+          name: Release ${{ github.sha }}
+          body: |
+            CI自动发布
+            commit: ${{ github.event.head_commit.message }}
+          files: |
+            lets-encrypt-linux-amd64
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Call Custom Callback API
+        if: always()
+        run: |
+          # 将commit消息换行、回车替换空格，避免JSON解析报错
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | sed -z 's/\n/ /g' | sed -z 's/\r/ /g')
+          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "runId": "${{ github.run_id }}",
+            "imageName": "kouleen/lets-encrypt:latest",
+            "containerName": "lets-encrypt",
+            "branch": "${{ github.ref_name }}",
+            "repo": "${{ github.repository }}",
+            "htmlUrl": "${{ github.event.repository.html_url }}",
+            "cloneUrl": "${{ github.event.repository.clone_url }}",
+            "sshUrl": "${{ github.event.repository.ssh_url }}",
+            "status": "${{ job.status }}",
+            "actor": "${{ github.actor }}",
+            "commitMessage": "'"${COMMIT_MSG}"'",
+            "workflow": "${{ github.workflow }}",
+            "triggerType": "${{ github.event_name }}",
+            "failRemark": "${{ env.fail_msg }}",
+            "networkMode": "",
+            "restartPolicy": "",
+            "removeOldExist": true,
+            "enableIT": true,
+            "portMapping": {
+                "8099": "8099"
+            },
+            "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
+            "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
+            "cmdOverride": []
+          }'
