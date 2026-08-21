@@ -56,7 +56,7 @@ jobs:
       - name: Call Custom Callback API
         if : always()
         run: |
-          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put" \
+          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put?secret=${{ secrets.DOCKER_SECRET }}" \
           -H "Content-Type: application/json" \
           -d '{
             "runId": "${{ github.run_id }}",
