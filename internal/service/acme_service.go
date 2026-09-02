@@ -213,8 +213,8 @@ func generate(acmeUser *modle.AcmeUser, acmeEncrypt *modle.AcmeEncrypt) {
 			_, err = repository.UpdateAcmeEncrypt(ctx, acmeEncrypt)
 			if err != nil {
 				fmt.Printf("保存失败: %v\n", err)
-				return
 			}
+			return
 		}
 		certInfo, err := util.GetLocalCertExpire(acmeEncrypt.Encrypt+"/"+acmeEncrypt.Domain+"_bundle"+".pem", acmeEncrypt.RemainDay)
 		if err != nil {
@@ -225,7 +225,6 @@ func generate(acmeUser *modle.AcmeUser, acmeEncrypt *modle.AcmeEncrypt) {
 			_, err = repository.UpdateAcmeEncrypt(ctx, acmeEncrypt)
 			if err != nil {
 				fmt.Printf("保存失败: %v\n", err)
-				return
 			}
 			return
 		}
@@ -239,7 +238,6 @@ func generate(acmeUser *modle.AcmeUser, acmeEncrypt *modle.AcmeEncrypt) {
 		_, err = repository.UpdateAcmeEncrypt(ctx, acmeEncrypt)
 		if err != nil {
 			fmt.Printf("保存失败: %v\n", err)
-			return
 		}
 		return
 	}

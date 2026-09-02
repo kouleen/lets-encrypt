@@ -53,34 +53,34 @@ jobs:
             echo "fail_msg=流水线未发现异常" >> $GITHUB_ENV
           fi
 
-      - name: Call Custom Callback API
-        if : always()
-        run: |
-          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put?secret=${{ secrets.HOOK_SECRET }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "runId": "${{ github.run_id }}",
-            "imageName": "kouleen/lets-encrypt:latest",
-            "containerName": "lets-encrypt",
-            "branch": "${{ github.ref_name }}",
-            "repo": "${{ github.repository }}",
-            "htmlUrl": "${{ github.event.repository.html_url }}",
-            "cloneUrl": "${{ github.event.repository.clone_url }}",
-            "sshUrl": "${{ github.event.repository.ssh_url }}",
-            "status": "${{ job.status }}",
-            "actor": "${{ github.actor }}",
-            "commitMessage": "${{ github.event.head_commit.message }}",
-            "workflow": "${{ github.workflow }}",
-            "triggerType": "${{ github.event_name }}",
-            "failRemark": "${{ env.fail_msg }}",
-            "networkMode": "",
-            "restartPolicy": "",
-            "removeOldExist": true,
-            "enableIT": true,
-            "portMapping": {
-                "8099": "8099"
-            },
-            "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
-            "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
-            "cmdOverride": []
-          }'
+#      - name: Call Custom Callback API
+#        if : always()
+#        run: |
+#          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put?secret=${{ secrets.HOOK_SECRET }}" \
+#          -H "Content-Type: application/json" \
+#          -d '{
+#            "runId": "${{ github.run_id }}",
+#            "imageName": "kouleen/lets-encrypt:latest",
+#            "containerName": "lets-encrypt",
+#            "branch": "${{ github.ref_name }}",
+#            "repo": "${{ github.repository }}",
+#            "htmlUrl": "${{ github.event.repository.html_url }}",
+#            "cloneUrl": "${{ github.event.repository.clone_url }}",
+#            "sshUrl": "${{ github.event.repository.ssh_url }}",
+#            "status": "${{ job.status }}",
+#            "actor": "${{ github.actor }}",
+#            "commitMessage": "${{ github.event.head_commit.message }}",
+#            "workflow": "${{ github.workflow }}",
+#            "triggerType": "${{ github.event_name }}",
+#            "failRemark": "${{ env.fail_msg }}",
+#            "networkMode": "",
+#            "restartPolicy": "",
+#            "removeOldExist": true,
+#            "enableIT": true,
+#            "portMapping": {
+#                "8099": "8099"
+#            },
+#            "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
+#            "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
+#            "cmdOverride": []
+#          }'
