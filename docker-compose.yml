@@ -13,3 +13,9 @@ services:
       - /usr/bin/docker:/usr/bin/docker:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/nginx/certs:/app/nginx/certs
+    networks:
+      - lets-encrypt-network
+networks:
+  lets-encrypt-network:
+    driver: bridge
+    name: lets-encrypt-network
