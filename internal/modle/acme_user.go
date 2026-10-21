@@ -89,7 +89,7 @@ func (u *AcmeUser) LetsEncryptGenerate(ctx context.Context, encrypt Encrypt, reg
 	if err := safeWriteFile(keyPath, cert.PrivateKey, 0600); err != nil {
 		return err
 	}
-	log.Printf("证书已保存到当前目录: %s, %s", encrypt.GetEncrypt()+encrypt.GetDomain()+"_bundle"+".pem", encrypt.GetEncrypt()+encrypt.GetDomain()+".key")
+	log.Printf("证书已保存到当前目录: %s, %s", encrypt.GetEncrypt()+"/"+encrypt.GetDomain()+"_bundle"+".pem", encrypt.GetEncrypt()+"/"+encrypt.GetDomain()+".key")
 	return nil
 }
 
