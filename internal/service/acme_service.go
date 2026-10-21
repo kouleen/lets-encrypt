@@ -350,9 +350,6 @@ func RefreshAcmeEncrypt(ctx context.Context, domain string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Encrypt == "" {
-		return nil, errors.New("证书路径为空，刷新失败")
-	}
 	acmeAccount, err := repository.GetAcmeAccountByUsername(ctx, resp.Username)
 	if err != nil {
 		return nil, err
