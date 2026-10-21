@@ -2,6 +2,11 @@ name: GitHub Docker Image CI
 on:
   push:
     branches: [ "release" ]
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +29,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # 登录Docker Hub
+      - name: Login to Docker Hub
+        id: docker_login_ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # 构建镜像并推送到 hub.docker.com kouleen/golive-server:latest
       - name: Build and push Docker image
         id: docker_build
@@ -32,8 +46,20 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true # 构建完成自动推送
-          tags: kouleen/lets-encrypt:latest
+          tags: ${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
         #run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+
+      # 构建镜像并推送到
+      - name: Build and push ghcr.io image
+        id: docker_build_ghcr
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true # 构建完成自动推送
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
         # 仅构建失败时，赋值失败阶段+备注到环境变量
       - name: Set Fail Info Env
@@ -56,12 +82,12 @@ jobs:
       - name: Call Custom Callback API
         if : always()
         run: |
-          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put" \
+          curl -X POST "https://www.kouleen.cn/api/docker/webhook/put?secret=${{ secrets.HOOK_SECRET }}" \
           -H "Content-Type: application/json" \
           -d '{
             "runId": "${{ github.run_id }}",
-            "imageName": "kouleen/lets-encrypt:latest",
-            "containerName": "lets-encrypt",
+            "imageName": "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest",
+            "containerName": "${{ github.event.repository.name }}",
             "branch": "${{ github.ref_name }}",
             "repo": "${{ github.repository }}",
             "htmlUrl": "${{ github.event.repository.html_url }}",
@@ -80,7 +106,17 @@ jobs:
             "portMapping": {
                 "8099": "8099"
             },
-            "envList": ["SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}","SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}","SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}","SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"],
-            "volumeBinds": ["/home/nginx/certs:/app/nginx/certs","/usr/bin/docker:/usr/bin/docker:ro","/var/run/docker.sock:/var/run/docker.sock"],
+            "envList": [
+              "SEND_EMAIL=${{ secrets.DOCKER_SEND_EMAIL }}",
+              "SEND_PWD=${{ secrets.DOCKER_SEND_PWD }}",
+              "SMTP_SERVER=${{ secrets.DOCKER_SMTP_SERVER }}",
+              "SMTP_PORT=${{ secrets.DOCKER_SMTP_PORT }}"
+            ],
+            "volumeBinds": [
+              "/home/nginx/certs:/app/nginx/certs",
+              "/home/docker-compose/lets-encrypt/lets-encrypt.db:/app/lets-encrypt.db",
+              "/usr/bin/docker:/usr/bin/docker:ro",
+              "/var/run/docker.sock:/var/run/docker.sock"
+            ],
             "cmdOverride": []
           }'
