@@ -67,8 +67,7 @@ func autoRefreshReload(now time.Time) {
 	// 先查询出数据
 	v := uint8(1)
 	req := &modle.AcmeEncryptQuery{
-		Status: &v,
-		Auto:   &v,
+		Auto: &v,
 	}
 	encryptList, err := service.ListAcmeEncrypt(ctx, req)
 	if err != nil {
@@ -76,10 +75,6 @@ func autoRefreshReload(now time.Time) {
 		return
 	}
 	for _, encrypt := range encryptList {
-		// 过滤掉证书路径不存在的情况
-		if encrypt.Encrypt == "" {
-			continue
-		}
 		expireTime := encrypt.ExpireTime
 		remainDur := expireTime.Sub(now)
 		remainDay := int(remainDur.Hours() / 24)
@@ -106,7 +101,6 @@ func noticeEmail(now time.Time) {
 	// 先查询出数据
 	v := uint8(1)
 	req := &modle.AcmeEncryptQuery{
-		Status: &v,
 		Notice: &v,
 	}
 	encryptList, err := service.ListAcmeEncrypt(ctx, req)
