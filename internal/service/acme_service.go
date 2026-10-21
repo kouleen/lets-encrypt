@@ -205,6 +205,7 @@ func generate(acmeUser *modle.AcmeUser, acmeEncrypt *modle.AcmeEncrypt) {
 	defer cancel()
 	acmeEncrypt.Remark = "SUCCESS"
 	e := uint8(1)
+	acmeEncrypt.Status = &e
 	if acmeEncrypt.Encrypt != "" {
 		if err := acmeUser.LetsEncryptGenerate(ctx, acmeEncrypt, true); err != nil {
 			fmt.Printf("生成证书文件失败: %v\n", err)
